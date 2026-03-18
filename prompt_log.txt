@@ -5,4 +5,4 @@ Phase 1:
 4. its still not closing properly, i dont wanna mess with my client side settings because other people will have to work on this
 5. yes, add this AI to the ghosts and also add more ghosts to match the original game
 6. yes now add power pellets
-7. 
+7. i think the original had the ghosts spawn/respawn in the box in the middle. there was also a one-way barrier such that the player cant go inside and infinitely kill the ghosts
