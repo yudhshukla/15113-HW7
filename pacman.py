@@ -20,77 +20,105 @@ DARK_BLUE = (0, 0, 139)
 
 # --- 2. LEVEL DESIGN ---
 # Easily editable grid. W=Wall, .=Pellet, P=Player, G=Ghost, Space=Empty, O=Powerup
-LEVEL_MAP = [
-    "WWWWWWWWWWWWWWWWWWW",
-    "W.O.............O.W",
-    "W.WW.WWW.W.WWW.WW.W",
-    "W.WW.WWW.W.WWW.WW.W",
-    "W.................W",
-    "W.WW.W.WWWWW.W.WW.W",
-    "W....W...W...W....W",
-    "WWWW.WWW W WWW.WWWW",
-    "   W.W       W.W   ",
-    "WWWW.W WW-WW W.WWWW", # <--- The '-' is the one-way gate
-    "    .  W1234 W  .  ", # <--- Ghosts now spawn inside the house
-    "WWWW.W WWWWW W.WWWW",
-    "   W.W       W.W   ",
-    "WWWW.W WWWWW W.WWWW",
-    "W........W........W",
-    "W.WW.WWW.W.WWW.WW.W",
-    "W..W.O...P...O.W..W",
-    "WW.W.W.WWWWW.W.W.WW",
-    "W....W...W...W....W",
-    "WWWWWWWWWWWWWWWWWWW"
+# --- 2. LEVEL DESIGN ---
+# We've wrapped your original map into a list, and added a second map layout.
+# You can add as many maps to this list as you want!
+LEVELS = [
+    [ # Level 1 (Your original map)
+        "WWWWWWWWWWWWWWWWWWW",
+        "W.O.............O.W",
+        "W.WW.WWW.W.WWW.WW.W",
+        "W.WW.WWW.W.WWW.WW.W",
+        "W.................W",
+        "W.WW.W.WWWWW.W.WW.W",
+        "W....W...W...W....W",
+        "WWWW.WWW W WWW.WWWW",
+        "   W.W       W.W   ",
+        "WWWW.W WW-WW W.WWWW", 
+        "    .  W1234 W  .  ", 
+        "WWWW.W WWWWW W.WWWW",
+        "   W.W       W.W   ",
+        "WWWW.W WWWWW W.WWWW",
+        "W........W........W",
+        "W.WW.WWW.W.WWW.WW.W",
+        "W..W.O...P...O.W..W",
+        "WW.W.W.WWWWW.W.W.WW",
+        "W....W...W...W....W",
+        "WWWWWWWWWWWWWWWWWWW"
+    ],
+    [ # Level 2 (A new, more open map to demonstrate progression)
+        "WWWWWWWWWWWWWWWWWWW",
+        "W........O........W",
+        "W.WWWWW.WWW.WWWWW.W",
+        "W.......W1W.......W",
+        "WWWWWWW.W-W.WWWWWWW",
+        "      ..234..      ",
+        "WWWWWWW.WWW.WWWWWWW",
+        "W........P........W",
+        "W.WWWWW.WWW.WWWWW.W",
+        "W.O.............O.W",
+        "WWWWWWWWWWWWWWWWWWW"
+    ]
 ]
 
-WIDTH = len(LEVEL_MAP[0]) * TILE_SIZE
-HEIGHT = len(LEVEL_MAP) * TILE_SIZE
+# Note: WIDTH and HEIGHT should now grab from LEVELS[0] instead of LEVEL_MAP
+WIDTH = len(LEVELS[0][0]) * TILE_SIZE
+HEIGHT = len(LEVELS[0]) * TILE_SIZE
 
 # --- 3. PLAYER CLASS ---
 class Player:
     def __init__(self, x, y):
-        # The Rect is used for drawing and collision detection
         self.rect = pygame.Rect(x, y, TILE_SIZE - 4, TILE_SIZE - 4)
-        self.speed = 3
+        
+        # FIX: Changed speed from 3 to 2. 
+        # TILE_SIZE (32) is perfectly divisible by 2. This guarantees the player 
+        # always aligns perfectly with the corridors, preventing corner-snagging!
+        self.speed = 2 
         self.dx = 0
         self.dy = 0
-        # Buffer to hold the next move intent (makes turning around corners smoother)
         self.next_dx = 0
         self.next_dy = 0
 
     def handle_keys(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                self.next_dx, self.next_dy = -self.speed, 0
-            elif event.key == pygame.K_RIGHT:
-                self.next_dx, self.next_dy = self.speed, 0
-            elif event.key == pygame.K_UP:
-                self.next_dx, self.next_dy = 0, -self.speed
-            elif event.key == pygame.K_DOWN:
-                self.next_dx, self.next_dy = 0, self.speed
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.next_dx = -self.speed
+                self.next_dy = 0
+            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.next_dx = self.speed
+                self.next_dy = 0
+            elif event.key == pygame.K_UP or event.key == pygame.K_w:
+                self.next_dx = 0
+                self.next_dy = -self.speed
+            elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                self.next_dx = 0
+                self.next_dy = self.speed
 
     def update(self, walls):
         # 1. Try to move in the 'next' direction requested by the player
         projected_rect = self.rect.move(self.next_dx, self.next_dy)
         if not self.check_collision(projected_rect, walls):
-            # If the requested turn is clear, commit to it
+            # If the requested turn is clear of walls, commit to the turn
             self.dx, self.dy = self.next_dx, self.next_dy
 
-        # 2. Move in the current direction
+        # 2. Move horizontally
         self.rect.x += self.dx
         if self.check_collision(self.rect, walls):
-            self.rect.x -= self.dx # Undo horizontal move if hit wall
+            self.rect.x -= self.dx # Undo horizontal move if we hit a wall
+            self.dx = 0            # FIX: Stop horizontal momentum entirely
 
+        # 3. Move vertically
         self.rect.y += self.dy
         if self.check_collision(self.rect, walls):
-            self.rect.y -= self.dy # Undo vertical move if hit wall
+            self.rect.y -= self.dy # Undo vertical move if we hit a wall
+            self.dy = 0            # FIX: Stop vertical momentum entirely
 
-        # 3. Screen Wrap (Tunnel logic)
+        # 4. Screen Wrap (Tunnel logic)
         if self.rect.right < 0:
             self.rect.left = WIDTH
         elif self.rect.left > WIDTH:
             self.rect.right = 0
-
+            
     def check_collision(self, rect, walls):
         # Checks if a given rectangle overlaps with any wall rectangle
         for wall in walls:
@@ -190,40 +218,48 @@ class Ghost:
 
 # --- 5. GAME MANAGER ---
 class Game:
+    # Inside the Game class...
+
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("Pac-Man Foundation")
         self.clock = pygame.time.Clock()
-        
-        # Setup Font for Game Over text
         self.font = pygame.font.SysFont("Arial", 36)
         
         self.running = True
-        self.state = "PLAYING" # New state tracker
+        self.state = "PLAYING" 
         
-        self.reset_game() # Use a reset function to build the level
+        # NEW: Track the player's current level index
+        self.current_level_idx = 1
+        self.score = 0 # Move score here so it doesn't reset on new levels
+        
+        self.reset_game() 
 
     def reset_game(self):
+        # Clears out all entities so we can spawn them fresh for the new level
         self.walls = []
-        self.gates = [] # NEW: Add gates list
+        self.gates = [] 
         self.pellets = []
-        self.power_pellets = [] # New list
+        self.power_pellets = [] 
         self.ghosts = []
-        self.score = 0
         self.state = "PLAYING"
         
-        self.frightened_timer = 0          # Tracks the time left
-        self.frightened_duration = FPS * 7 # 7 seconds of power mode
+        self.frightened_timer = 0          
+        self.frightened_duration = FPS * 7 
         
         self.load_level()
 
     def load_level(self):
-        for row_idx, row in enumerate(LEVEL_MAP):
+        # NEW: Fetch the specific map layout for our current level
+        current_map = LEVELS[self.current_level_idx]
+        
+        # Parse the map grid just like before
+        for row_idx, row in enumerate(current_map):
             for col_idx, char in enumerate(row):
                 x = col_idx * TILE_SIZE
                 y = row_idx * TILE_SIZE
-                
+                # ... (Keep all the if/elif conditions exactly the same here) ...
                 if char == 'W':
                     self.walls.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
                 elif char == '-': # NEW: Parse the gate
@@ -245,7 +281,6 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
-                
                 if self.state == "PLAYING" and self.player:
                     self.player.handle_keys(event)
                 elif self.state == "GAME_OVER" and event.type == pygame.KEYDOWN:
@@ -305,6 +340,15 @@ class Game:
                 self.score += 50
                 self.frightened_timer = self.frightened_duration # Start/Reset the timer!
                 pygame.display.set_caption(f"Score: {self.score}")
+        
+        if len(self.pellets) == 0 and len(self.power_pellets) == 0:
+            self.current_level_idx += 1 # Advance the level index
+            
+            # Check if we beat the last level
+            if self.current_level_idx >= len(LEVELS):
+                self.state = "VICTORY" # You'll need to draw a victory screen similar to game over!
+            else:
+                self.reset_game() # Automatically builds the next map!
 
     def check_ghost_collisions(self):
         for ghost in self.ghosts:
