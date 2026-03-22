@@ -6,3 +6,14 @@ Phase 1:
 5. yes, add this AI to the ghosts and also add more ghosts to match the original game
 6. yes now add power pellets
 7. i think the original had the ghosts spawn/respawn in the box in the middle. there was also a one-way barrier such that the player cant go inside and infinitely kill the ghosts
+
+Phase 2:
+1. How can we fix the bug that causes the player to get stuck when moving in one direction despite not hitting a wall?
+2. Can you make a new map to add?
+3. I know what is causing the buggy movement; it's when you try to go in an invalid direction, causing the player to stop moving. How can we prevent the player to move in that deirection at all?
+4. This works for preventing getting stuck when selecting arrow keys when they wont work, but now, if a player runs into a corner like in the image, then the player will not move when we try to go down or right. Is it possible to fix this by first checking if an arrow key will produce a valid movement, and if not, we dont move?
+5. Can you explain how the ghost ai logic works right now, and potential improvements?
+6. This caused all the ghosts except for the orange one to immediately go off the screen, why did that happen?
+7. Now I only see the red ghost and its movement is infinite between two walls back and forth.
+8. The AI is even worse now, for much of the time, the pairs of ghosts follow the exact same movement, just between two walls and dont follow me even if i go all the way to the top of the map/
+9. Why does the second map only take up half the screen?
