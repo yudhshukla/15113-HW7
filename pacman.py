@@ -22,7 +22,7 @@ DARK_BLUE = (0, 0, 139)
 # Easily editable grid. W=Wall, .=Pellet, P=Player, G=Ghost, Space=Empty, O=Powerup
 # --- 2. LEVEL DESIGN ---
 # We've wrapped your original map into a list, and added a second map layout.
-# You can add as many maps to this list as you want!
+# --- 2. LEVEL DESIGN ---
 LEVELS = [
     [ # Level 1 (Your original map)
         "WWWWWWWWWWWWWWWWWWW",
@@ -46,33 +46,39 @@ LEVELS = [
         "W....W...W...W....W",
         "WWWWWWWWWWWWWWWWWWW"
     ],
-    [ # Level 2 (A new, more open map to demonstrate progression)
+    [ # Level 2 (Expanded to 20 rows for full screen!)
         "WWWWWWWWWWWWWWWWWWW",
         "W........O........W",
         "W.WWWWW.WWW.WWWWW.W",
-        "W.......W1W.......W",
-        "WWWWWWW.W-W.WWWWWWW",
-        "      ..234..      ",
-        "WWWWWWW.WWW.WWWWWWW",
-        "W........P........W",
         "W.WWWWW.WWW.WWWWW.W",
+        "W.................W",
+        "WWWW.WWW W WWW.WWWW",
+        "   W.W       W.W   ",
+        "WWWW.W WW-WW W.WWWW", 
+        "    .  W1234 W  .  ", 
+        "WWWW.W WWWWW W.WWWW",
+        "   W.W       W.W   ",
+        "WWWW.W WWWWW W.WWWW",
+        "W.................W",
+        "W.WWWWW.WWW.WWWWW.W",
+        "W........P........W",
+        "W.WW.WWWWWWWWW.WW.W",
+        "W..W.....W.....W..W",
+        "WW.WWWWW.W.WWWWW.WW",
         "W.O.............O.W",
         "WWWWWWWWWWWWWWWWWWW"
     ]
 ]
 
-# Note: WIDTH and HEIGHT should now grab from LEVELS[0] instead of LEVEL_MAP
 WIDTH = len(LEVELS[0][0]) * TILE_SIZE
 HEIGHT = len(LEVELS[0]) * TILE_SIZE
 
 # --- 3. PLAYER CLASS ---
 class Player:
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, TILE_SIZE - 4, TILE_SIZE - 4)
-        
-        # FIX: Changed speed from 3 to 2. 
-        # TILE_SIZE (32) is perfectly divisible by 2. This guarantees the player 
-        # always aligns perfectly with the corridors, preventing corner-snagging!
+        # THE FIX: Make the hitbox EXACTLY 32x32 to match the corridors.
+        # Your Game class passes in x+2, y+2, so we subtract 2 to snap it perfectly back to the grid.
+        self.rect = pygame.Rect(x - 2, y - 2, TILE_SIZE, TILE_SIZE)
         self.speed = 2 
         self.dx = 0
         self.dy = 0
@@ -95,25 +101,26 @@ class Player:
                 self.next_dy = self.speed
 
     def update(self, walls):
-        # 1. Try to move in the 'next' direction requested by the player
+        # 1. Input Buffering & Turning
+        # Because the rect is exactly 32x32, a turn will ONLY be valid (no collisions) 
+        # when perfectly aligned with an intersecting 32x32 corridor.
         projected_rect = self.rect.move(self.next_dx, self.next_dy)
         if not self.check_collision(projected_rect, walls):
-            # If the requested turn is clear of walls, commit to the turn
             self.dx, self.dy = self.next_dx, self.next_dy
 
         # 2. Move horizontally
         self.rect.x += self.dx
         if self.check_collision(self.rect, walls):
-            self.rect.x -= self.dx # Undo horizontal move if we hit a wall
-            self.dx = 0            # FIX: Stop horizontal momentum entirely
+            self.rect.x -= self.dx
+            self.dx = 0 
 
         # 3. Move vertically
         self.rect.y += self.dy
         if self.check_collision(self.rect, walls):
-            self.rect.y -= self.dy # Undo vertical move if we hit a wall
-            self.dy = 0            # FIX: Stop vertical momentum entirely
+            self.rect.y -= self.dy
+            self.dy = 0 
 
-        # 4. Screen Wrap (Tunnel logic)
+        # 4. Screen Wrap 
         if self.rect.right < 0:
             self.rect.left = WIDTH
         elif self.rect.left > WIDTH:
@@ -127,18 +134,21 @@ class Player:
         return False
 
     def draw(self, surface):
-        pygame.draw.circle(surface, YELLOW, self.rect.center, self.rect.width // 2)
+        # We still draw the yellow circle slightly smaller (-2 radius)
+        # so it visually looks nice and doesn't visually touch the walls!
+        pygame.draw.circle(surface, YELLOW, self.rect.center, (TILE_SIZE // 2) - 2)
 
 # --- 4. GHOST CLASS ---
 class Ghost:
     def __init__(self, x, y, ghost_type):
-        self.rect = pygame.Rect(x, y, TILE_SIZE - 4, TILE_SIZE - 4)
+        # THE FIX: Snap the mathematical hitbox perfectly to the 32x32 grid
+        self.rect = pygame.Rect(x - 2, y - 2, TILE_SIZE, TILE_SIZE)
         self.speed = 2 
         self.ghost_type = ghost_type
         
         # Save starting coordinates for respawning
-        self.start_x = x
-        self.start_y = y
+        self.start_x = self.rect.x
+        self.start_y = self.rect.y
         
         if self.ghost_type == 1: self.color = RED        
         elif self.ghost_type == 2: self.color = PINK     
@@ -155,29 +165,39 @@ class Ghost:
         self.dx, self.dy = self.speed, 0
 
     def get_target(self, player, is_frightened):
-        # If the ghost is scared, it ignores its normal AI and picks random corners
         if is_frightened:
             return random.randint(0, WIDTH), random.randint(0, HEIGHT)
 
-        # Normal AI below
+        target_x = player.rect.x
+        target_y = player.rect.y
+
         if self.ghost_type == 1:
-            return player.rect.x, player.rect.y
+            pass 
         elif self.ghost_type == 2:
-            return player.rect.x + (player.dx * 15), player.rect.y + (player.dy * 15)
+            target_x += player.dx * 64
+            target_y += player.dy * 64
         elif self.ghost_type == 3:
-            return random.randint(0, WIDTH), random.randint(0, HEIGHT)
+            target_x -= player.dx * 32
+            target_y -= player.dy * 32
         else:
             dist = abs(self.rect.x - player.rect.x) + abs(self.rect.y - player.rect.y)
             if dist < TILE_SIZE * 5:
-                return 0, HEIGHT 
-            return player.rect.x, player.rect.y
+                target_x, target_y = 0, HEIGHT 
+
+        target_x = max(0, min(WIDTH - TILE_SIZE, target_x))
+        target_y = max(0, min(HEIGHT - TILE_SIZE, target_y))
+
+        return target_x, target_y
 
     def update(self, walls, player, is_frightened):
         self.rect.x += self.dx
         self.rect.y += self.dy
 
         hit_wall = self.check_collision(self.rect, walls)
-        at_intersection = (self.rect.x - 2) % TILE_SIZE == 0 and (self.rect.y - 2) % TILE_SIZE == 0
+        
+        # CLEANER MATH: Because the rect is exactly 32x32, we don't need the "- 2" 
+        # offset anymore. Intersections are perfect multiples of the TILE_SIZE!
+        at_intersection = self.rect.x % TILE_SIZE == 0 and self.rect.y % TILE_SIZE == 0
 
         if hit_wall or at_intersection:
             if hit_wall:
@@ -212,9 +232,12 @@ class Ghost:
         return False
 
     def draw(self, surface, is_frightened):
-        # Change color to DARK_BLUE if the frightened timer is active
         current_color = DARK_BLUE if is_frightened else self.color
-        pygame.draw.rect(surface, current_color, self.rect, border_radius=8)
+        
+        # THE VISUAL FIX: We draw the colored square slightly smaller (24x24) 
+        # and offset it by 4 pixels so it sits dead center in the 32x32 invisible hitbox.
+        draw_rect = pygame.Rect(self.rect.x + 4, self.rect.y + 4, TILE_SIZE - 8, TILE_SIZE - 8)
+        pygame.draw.rect(surface, current_color, draw_rect, border_radius=8)
 
 # --- 5. GAME MANAGER ---
 class Game:
